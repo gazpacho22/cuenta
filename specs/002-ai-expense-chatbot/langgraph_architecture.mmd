@@ -1,0 +1,61 @@
+stateDiagram-v2
+    [*] --> ingest_message
+    ingest_message --> parse_expense
+    parse_expense --> fill_gaps : missing details
+    parse_expense --> resolve_accounts : info complete
+    fill_gaps --> parse_expense : clarified
+    resolve_accounts --> confirm_or_edit
+    confirm_or_edit --> parse_expense : user edits
+    confirm_or_edit --> post_to_erpnext : user approves
+    post_to_erpnext --> queue_retry : ERPNext failure
+    queue_retry --> post_to_erpnext : retry window
+    post_to_erpnext --> log_and_notify : success
+    queue_retry --> log_and_notify : retries exhausted
+    log_and_notify --> [*]
+
+    note right of ingest_message
+        Expects any Telegram update from an authorized user.
+        Unrecognized/unauthorized senders trigger access guidance
+        before the state hand-off to parsing.
+    end note
+
+    note right of parse_expense
+        Uses LLM/tooling to extract amount, accounts, narration.
+        If essential fields are missing or inconsistent,
+        it routes to fill_gaps with specific prompts.
+    end note
+
+    note right of fill_gaps
+        Prompts for whichever fields remain incomplete
+        (amount, account, narration, attachments). Off-topic
+        replies gently remind the user what data is needed.
+    end note
+
+    note right of resolve_accounts
+        Compares parsed aliases to ERPNext chart results.
+        Low-confidence matches produce clarifying questions
+        or fallback suggestions.
+    end note
+
+    note right of confirm_or_edit
+        Waits for confirm/cancel/edit intents only.
+        Any other input triggers a reminder or sends the user
+        back to parsing if they want to revise.
+    end note
+
+    note right of post_to_erpnext
+        Calls ERPNext API and records latency.
+        Failure branches to queue_retry; success proceeds
+        directly to logging/notifications.
+    end note
+
+    note right of queue_retry
+        Stores payload + backoff schedule in SQLite.
+        Notifies the user about temporary delays until
+        retries succeed or exhaust.
+    end note
+
+    note right of log_and_notify
+        Writes structured attempt logs (preview/result/errors)
+        and informs the user about the final outcome.
+    end note

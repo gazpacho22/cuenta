@@ -12,6 +12,7 @@ Follow-up TODOs: None
 ## Core Principles
 
 ### I. Beginner-Centered Communication
+- MUST write all project specifications, plans and task document in as non-technichal jargon as possible. when technichal words must be used, do it. User is a normal computer user learning programming for the first time with this project. Whenever tasks are completed explain what was built in the same language.
 - MUST write code, docstrings, and supporting text so a beginner can follow the logic without
   prior context, using descriptive names over cleverness.
 - MUST use docstrings following the Google style guide and add focused comments only where the
@@ -27,6 +28,11 @@ prevents misunderstandings.
   changing production code.
 - MUST treat BDD scenarios as the canonical specification; any change to expected behavior
   demands a test update reviewed by the product owner.
+- MUST keep Gherkin text human-readable and co-located with its step definitions (inline or
+  standalone `.feature` files) so non-engineers can review changes without hunting through the
+  repo.
+- MUST use the shared `materialize_inline_feature()` helper when embedding Gherkin inside
+  `tests/bdd/*_steps.py` so pytest-bdd always receives a synced feature file automatically.
 - MUST keep features small enough that each scenario runs quickly and is easy to understand.
 
 Rationale: Behavior-driven tests protect intent, create executable documentation, and keep the
@@ -94,4 +100,4 @@ Rationale: Consistent knowledge capture empowers new contributors and preserves 
 - Compliance reviews occur at the end of each sprint; any violation MUST be logged with a plan
   to resolve it in the next iteration.
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-06
+**Version**: 1.0.0 | **Ratified**: 2025-11-06 | **Last Amended**: 2025-11-07

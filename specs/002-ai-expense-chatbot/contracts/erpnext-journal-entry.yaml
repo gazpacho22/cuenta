@@ -1,0 +1,155 @@
+openapi: 3.1.0
+info:
+  title: ERPNext Journal Entry API Contract
+  version: 0.1.0
+  description: >
+    Minimal contract describing how the expense assistant creates journal entries inside ERPNext.
+servers:
+  - url: https://{erp_host}
+    variables:
+      erp_host:
+        default: erp.example.com
+paths:
+  /api/resource/Journal Entry:
+    post:
+      summary: Create journal entry
+      description: Posts a balanced journal entry representing a user-confirmed expense.
+      operationId: createJournalEntry
+      security:
+        - ERPNextToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalEntryRequest'
+            examples:
+              expense:
+                value:
+                  posting_date: "2025-11-07"
+                  company: "Cuenta HQ"
+                  user_remark: "Telegram #42 | Paid $12 cash for taxi"
+                  accounts:
+                    - account: "Taxi Expense - HQ"
+                      debit_in_account_currency: 12.0
+                      credit_in_account_currency: 0.0
+                      reference_type: "Telegram Message"
+                      reference_name: "chat:987654321/msg:42"
+                    - account: "Cash - HQ"
+                      debit_in_account_currency: 0.0
+                      credit_in_account_currency: 12.0
+      responses:
+        '200':
+          description: Journal entry created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalEntryResponse'
+        '409':
+          description: Validation error from ERPNext (e.g., closed period)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ERPError'
+        '422':
+          description: Unbalanced or invalid data provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ERPError'
+components:
+  securitySchemes:
+    ERPNextToken:
+      type: http
+      scheme: bearer
+      bearerFormat: token api_key:api_secret
+  schemas:
+    JournalEntryRequest:
+      type: object
+      required:
+        - posting_date
+        - company
+        - accounts
+      properties:
+        posting_date:
+          type: string
+          format: date
+        company:
+          type: string
+        title:
+          type: string
+          description: Optional custom title displayed in ERPNext
+        user_remark:
+          type: string
+          description: Human-readable summary + Telegram reference
+        accounts:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/JournalEntryLine'
+        remark:
+          type: string
+          description: Internal note for finance reviewers
+    JournalEntryLine:
+      type: object
+      required:
+        - account
+        - debit_in_account_currency
+        - credit_in_account_currency
+      properties:
+        account:
+          type: string
+          description: Exact ERPNext account name/code
+        debit_in_account_currency:
+          type: number
+          format: float
+        credit_in_account_currency:
+          type: number
+          format: float
+        reference_type:
+          type: string
+          description: Optional linked document type
+        reference_name:
+          type: string
+          description: Optional linked document name (e.g., Telegram reference)
+        narration:
+          type: string
+          description: Optional line-specific memo
+    JournalEntryResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - name
+            - posting_date
+            - voucher_number
+            - accounts
+          properties:
+            name:
+              type: string
+              description: ERPNext document name
+            posting_date:
+              type: string
+              format: date
+            voucher_number:
+              type: string
+            accounts:
+              type: array
+              items:
+                $ref: '#/components/schemas/JournalEntryLine'
+            link:
+              type: string
+              description: Absolute URL to the document
+    ERPError:
+      type: object
+      properties:
+        exc_type:
+          type: string
+        _server_messages:
+          type: string
+        message:
+          type: string
+          description: Human-readable error; surface this back to the user

@@ -1,14 +1,24 @@
-langgraph
-langgraph-prebuilt
-langgraph-sdk
-langgraph-checkpoint-sqlite
-langsmith
-langchain-community
-langchain-core
-langchain-openai
-notebook
-langchain-tavily
-wikipedia
-trustcall
-langgraph-cli[inmem]
+# Core LangGraph + LangChain stack
+langgraph==1.0.2
+langgraph-prebuilt==1.0.2
+langgraph-sdk==0.2.9
+langgraph-checkpoint-sqlite==3.0.0
+langgraph-cli[inmem]==0.4.7
+langsmith==0.4.41
+langchain-core==1.0.3
+langchain-community==0.4.1
+langchain-openai==1.0.2
+langchain-tavily==0.2.13
+pydantic==2.12.4
+pydantic-settings==2.11.0
 
+# Telegram + integrations
+python-telegram-bot==21.*
+httpx==0.28.1
+rapidfuzz>=3.6.2
+
+# Tooling & notebooks
+pytest-bdd>=7.1.0
+notebook==7.4.7
+wikipedia==1.4.0
+trustcall==0.0.39
