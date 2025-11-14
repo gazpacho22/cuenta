@@ -1,0 +1,200 @@
+openapi: 3.1.0
+info:
+  title: Expense Bot Telegram Webhook
+  version: 0.1.0
+  description: |
+    Incoming webhook used by Telegram to deliver user messages to the LangGraph expense assistant.
+    The handler authenticates requests with the optional `X-Telegram-Bot-Api-Secret-Token` header.
+servers:
+  - url: https://{host}
+    description: Production bot endpoint
+    variables:
+      host:
+        default: bot.example.com
+paths:
+  /telegram/webhook:
+    post:
+      summary: Receive Telegram update
+      description: Accepts a single Telegram update and dispatches it into the LangGraph conversation runner.
+      operationId: handleTelegramUpdate
+      security:
+        - TelegramSignature: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramUpdate'
+            examples:
+              textMessage:
+                summary: User submits expense text
+                value:
+                  update_id: 123456789
+                  message:
+                    message_id: 42
+                    date: 1730937600
+                    chat:
+                      id: 987654321
+                      type: private
+                      username: "finance_user"
+                      first_name: "Ava"
+                    from:
+                      id: 987654321
+                      is_bot: false
+                      username: "finance_user"
+                      first_name: "Ava"
+                    text: "I just paid $12 cash for a taxi ride"
+      responses:
+        '200':
+          description: Acknowledge successful processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookAck'
+              examples:
+                accepted:
+                  value:
+                    status: ok
+                    queued: true
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Secret token is missing or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    TelegramSignature:
+      type: apiKey
+      in: header
+      name: X-Telegram-Bot-Api-Secret-Token
+  schemas:
+    WebhookAck:
+      type: object
+      required:
+        - status
+        - queued
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        queued:
+          type: boolean
+          description: Whether the update was scheduled for asynchronous processing
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - error
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error:
+          type: string
+          description: Human-readable error message for logging
+    TelegramUpdate:
+      type: object
+      required:
+        - update_id
+      properties:
+        update_id:
+          type: integer
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        edited_message:
+          $ref: '#/components/schemas/TelegramMessage'
+        callback_query:
+          $ref: '#/components/schemas/TelegramCallback'
+    TelegramMessage:
+      type: object
+      required:
+        - message_id
+        - date
+        - chat
+      properties:
+        message_id:
+          type: integer
+        date:
+          type: integer
+          description: Unix timestamp
+        text:
+          type: string
+          description: Message body (if present)
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelegramMessageEntity'
+        chat:
+          type: object
+          required:
+            - id
+            - type
+          properties:
+            id:
+              type: integer
+            type:
+              type: string
+              enum: [private, group, supergroup]
+            title:
+              type: string
+            username:
+              type: string
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+    TelegramUser:
+      type: object
+      required:
+        - id
+        - is_bot
+      properties:
+        id:
+          type: integer
+        is_bot:
+          type: boolean
+        first_name:
+          type: string
+        last_name:
+          type: string
+        username:
+          type: string
+    TelegramMessageEntity:
+      type: object
+      required:
+        - type
+        - offset
+        - length
+      properties:
+        type:
+          type: string
+          description: Entity type (e.g., bot_command)
+        offset:
+          type: integer
+        length:
+          type: integer
+        url:
+          type: string
+    TelegramCallback:
+      type: object
+      required:
+        - id
+        - from
+        - chat_instance
+        - data
+      properties:
+        id:
+          type: string
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        chat_instance:
+          type: string
+        data:
+          type: string

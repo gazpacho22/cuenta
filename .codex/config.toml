@@ -1,2 +1,4 @@
+model = "gpt-5-codex-mini"
+model_reasoning_effort = "medium"
 [projects."/home/rodrigo/cuenta"]
 trust_level = "trusted"

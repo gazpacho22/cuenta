@@ -1,0 +1,84 @@
+stateDiagram-v2
+    [*] --> ingest_message
+    ingest_message --> auth_gate
+    auth_gate --> route_intent : authorized
+    auth_gate --> access_denied : missing link
+
+    route_intent --> expense_capture
+    route_intent --> transaction_lookup
+    route_intent --> budget_planning
+    route_intent --> general_help
+    route_intent --> fallback_misc : unclear intent
+
+    %% Expense capture branch (reuse current flow)
+    state expense_capture {
+        [*] --> parse_expense
+        parse_expense --> fill_gaps : missing info
+        parse_expense --> resolve_accounts : complete
+        fill_gaps --> parse_expense
+        resolve_accounts --> confirm_or_edit
+        confirm_or_edit --> parse_expense : edit request
+        confirm_or_edit --> post_to_erpnext : confirm
+        post_to_erpnext --> queue_retry : failure
+        queue_retry --> post_to_erpnext : retry window
+        post_to_erpnext --> log_and_notify : success
+        queue_retry --> log_and_notify : retries exhausted
+        log_and_notify --> [*]
+    }
+
+    %% Transaction lookup branch
+    state transaction_lookup {
+        [*] --> gather_filters
+        gather_filters --> query_recent_transactions
+        query_recent_transactions --> summarize_transactions
+        summarize_transactions --> present_report
+        present_report --> [*]
+    }
+
+    %% Budget planning branch
+    state budget_planning {
+        [*] --> collect_params
+        collect_params --> run_projection
+        run_projection --> explain_projection
+        explain_projection --> [*]
+    }
+
+    %% General help / knowledge base branch
+    state general_help {
+        [*] --> retrieve_policy_docs
+        retrieve_policy_docs --> answer_question
+        answer_question --> [*]
+    }
+
+    %% Fallback node handling unpredictable inputs
+    fallback_misc --> route_intent : reclassify intent
+
+    note right of auth_gate
+        Validates Telegram user mapping to ERPNext.
+        Unauthorized users stop here with instructions.
+    end note
+
+    note right of route_intent
+        Router LLM/tool inspects the message and chooses
+        among expense capture, transaction lookup,
+        budgeting, or general help. Low confidence routes
+        to fallback_misc.
+    end note
+
+    note right of transaction_lookup
+        Nodes call ERPNext (or caching layer) to fetch
+        recent journal entries, invoices, balances, etc.,
+        and format summaries for the user.
+    end note
+
+    note right of budget_planning
+        Uses Python analysis helpers to aggregate spend,
+        run simple projections, or compare against targets.
+        Could call external forecasting tools as needed.
+    end note
+
+    note right of general_help
+        Retrieval-QA path that consults knowledge bases
+        (policies, onboarding docs, FAQs) to answer
+        open-ended questions or guide the user.
+    end note
